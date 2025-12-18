@@ -15,9 +15,11 @@ export class ApiClient {
       },
     })
 
-    // 401 Unauthorized - 자동 로그인 페이지로 리다이렉트
+    // 401 Unauthorized - /users/me 요청에서만 로그인 페이지로 리다이렉트
+    // 다른 API는 에러만 throw하여 개별적으로 처리할 수 있게 함
     if (response.status === 401) {
-      if (typeof window !== 'undefined') {
+      const isAuthEndpoint = endpoint === '/api/v1/users/me'
+      if (isAuthEndpoint && typeof window !== 'undefined') {
         const currentPath = window.location.pathname
         if (currentPath !== '/login' && currentPath !== '/signup') {
           window.location.href = '/login'

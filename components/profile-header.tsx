@@ -1,10 +1,30 @@
 "use client"
 
-import { ArrowLeft, Calendar, MapPin } from "lucide-react"
+import { useState } from "react"
+import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAuth } from "@/hooks/api/use-auth"
+import { useFollowCounts } from "@/hooks/api/use-follows"
+import { useMyPosts } from "@/hooks/api/use-profile"
+import { ProfileEditDialog } from "@/components/profile-edit-dialog"
+import type { ProfileTab } from "@/app/profile/page"
 
-export function ProfileHeader() {
+interface ProfileHeaderProps {
+  activeTab: ProfileTab
+  onTabChange: (tab: ProfileTab) => void
+}
+
+export function ProfileHeader({ activeTab, onTabChange }: ProfileHeaderProps) {
+  const { user, isAuthenticated } = useAuth()
+  const { data: followCounts } = useFollowCounts(isAuthenticated)
+  const { data: posts } = useMyPosts(isAuthenticated)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+
+  const postCount = posts?.length ?? 0
+  const followingCount = followCounts?.followeesCount ?? 0
+  const followerCount = followCounts?.followersCount ?? 0
+
   return (
     <>
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border">
@@ -13,8 +33,8 @@ export function ProfileHeader() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold">사용자</h1>
-            <div className="text-sm text-muted-foreground">125 트윗</div>
+            <h1 className="text-xl font-bold">{user?.username ?? "사용자"}</h1>
+            <div className="text-sm text-muted-foreground">{postCount}개 게시물</div>
           </div>
         </div>
       </div>
@@ -23,49 +43,53 @@ export function ProfileHeader() {
         <div className="h-48 bg-gradient-to-r from-primary/20 to-primary/40" />
         <div className="px-4">
           <div className="flex justify-between items-start -mt-16 mb-4">
-            <div className="w-32 h-32 rounded-full border-4 border-background bg-muted" />
-            <Button variant="outline" className="mt-20 rounded-full font-bold bg-transparent">
+            {/* 프로필 이미지 */}
+            <div className="w-32 h-32 rounded-full border-4 border-background bg-muted overflow-hidden">
+              {user?.profileImageUrl ? (
+                <img
+                  src={user.profileImageUrl}
+                  alt={user.username}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-4xl text-muted-foreground font-medium">
+                  {user?.username?.charAt(0).toUpperCase() || '?'}
+                </div>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              className="mt-20 rounded-full font-bold bg-transparent"
+              onClick={() => setIsEditDialogOpen(true)}
+            >
               프로필 수정
             </Button>
           </div>
 
           <div className="mb-4">
-            <h2 className="text-2xl font-bold">사용자</h2>
-            <div className="text-muted-foreground">@username</div>
-          </div>
-
-          <div className="mb-4 text-foreground">디자인과 개발을 사랑하는 크리에이터 ✨ 일상과 생각을 공유합니다</div>
-
-          <div className="flex flex-wrap gap-4 mb-4 text-muted-foreground text-sm">
-            <div className="flex items-center gap-1">
-              <MapPin className="w-4 h-4" />
-              서울, 대한민국
-            </div>
-            <div className="flex items-center gap-1">
-              <Calendar className="w-4 h-4" />
-              2024년 1월 가입
-            </div>
+            <h2 className="text-2xl font-bold">{user?.username ?? "사용자"}</h2>
+            <div className="text-muted-foreground">@{user?.username ?? "username"}</div>
           </div>
 
           <div className="flex gap-6 mb-4 text-sm">
             <div>
-              <span className="font-bold text-foreground">234</span>
+              <span className="font-bold text-foreground">{followingCount.toLocaleString()}</span>
               <span className="text-muted-foreground ml-1">팔로잉</span>
             </div>
             <div>
-              <span className="font-bold text-foreground">1,234</span>
+              <span className="font-bold text-foreground">{followerCount.toLocaleString()}</span>
               <span className="text-muted-foreground ml-1">팔로워</span>
             </div>
           </div>
         </div>
 
-        <Tabs defaultValue="tweets" className="w-full">
+        <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as ProfileTab)} className="w-full">
           <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent h-auto p-0">
             <TabsTrigger
-              value="tweets"
+              value="posts"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent flex-1"
             >
-              트윗
+              게시글
             </TabsTrigger>
             <TabsTrigger
               value="replies"
@@ -88,6 +112,12 @@ export function ProfileHeader() {
           </TabsList>
         </Tabs>
       </div>
+
+      {/* 프로필 수정 다이얼로그 */}
+      <ProfileEditDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+      />
     </>
   )
 }

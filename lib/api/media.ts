@@ -16,10 +16,6 @@ export const mediaApi = {
     return apiClient.post<MediaResponse>('/api/v1/media/uploaded', data)
   },
 
-  getById: (id: number) => {
-    return apiClient.get<MediaResponse>(`/api/v1/media/${id}`)
-  },
-
   getPresignedUrl: (id: number) => {
     return apiClient.get<PresignedUrlResponse>(`/api/v1/media/${id}/presigned-url`)
   },

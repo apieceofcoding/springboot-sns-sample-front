@@ -18,10 +18,12 @@ export function useFollowees() {
   })
 }
 
-export function useFollowCounts() {
+export function useFollowCounts(enabled: boolean = true) {
   return useQuery({
     queryKey: ['follow-counts'],
     queryFn: () => followsApi.getFollowCounts(),
+    enabled,
+    retry: false,
   })
 }
 

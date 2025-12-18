@@ -16,11 +16,10 @@ export function useAuth() {
   const loginMutation = useMutation({
     mutationFn: ({ username, password }: { username: string; password: string }) =>
       authApi.login(username, password),
-    onSuccess: async () => {
-      // 로그인 성공 후 사용자 정보 갱신
-      await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] })
+    onSuccess: () => {
       toast.success('로그인 성공!')
-      router.push('/')
+      // 전체 페이지 리로드로 모든 상태 초기화
+      window.location.href = '/'
     },
     onError: (error) => {
       toast.error('로그인 실패: 아이디나 비밀번호를 확인해주세요.')
@@ -31,14 +30,14 @@ export function useAuth() {
   const logoutMutation = useMutation({
     mutationFn: () => authApi.logout(),
     onSuccess: () => {
-      // 모든 쿼리 캐시 삭제
-      queryClient.clear()
       toast.success('로그아웃되었습니다.')
-      router.push('/login')
     },
     onError: (error) => {
-      toast.error('로그아웃 실패')
       console.error('Logout error:', error)
+    },
+    onSettled: () => {
+      // 전체 페이지 리로드로 모든 상태 초기화
+      window.location.href = '/login'
     },
   })
 

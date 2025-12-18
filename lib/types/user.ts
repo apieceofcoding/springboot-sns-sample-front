@@ -1,6 +1,8 @@
 export interface User {
   id: number
   username: string
+  profileMediaId: number | null
+  profileImageUrl: string | null
 }
 
 export interface UserSignupRequest {
@@ -11,4 +13,10 @@ export interface UserSignupRequest {
 export interface UserResponse {
   id: number
   username: string
+  profileMediaId: number | null
+  profileImageUrl: string | null
+}
+
+export interface ProfileImageInitRequest {
+  fileSize: number
 }

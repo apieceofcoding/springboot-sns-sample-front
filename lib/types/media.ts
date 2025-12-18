@@ -1,4 +1,4 @@
-export type MediaType = 'IMAGE' | 'VIDEO'
+export type MediaType = 'IMAGE' | 'VIDEO' | 'GIF'
 export type MediaStatus = 'INIT' | 'UPLOADED' | 'COMPLETED' | 'FAILED'
 
 export interface Media {
@@ -58,4 +58,5 @@ export interface MediaResponse {
 
 export interface PresignedUrlResponse {
   presignedUrl: string
+  media: MediaResponse
 }

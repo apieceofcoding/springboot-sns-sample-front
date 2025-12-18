@@ -53,7 +53,7 @@ export function Sidebar() {
 
         <Button className="mt-2 w-14 h-14 xl:w-full xl:h-auto rounded-full" size="lg">
           <Feather className="w-6 h-6 xl:hidden" />
-          <span className="hidden xl:block text-lg font-bold">트윗하기</span>
+          <span className="hidden xl:block text-lg font-bold">게시하기</span>
         </Button>
       </nav>
 
@@ -61,8 +61,18 @@ export function Sidebar() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-3 p-3 rounded-full hover:bg-accent transition-colors w-full">
-              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                <User className="w-6 h-6" />
+              <div className="w-10 h-10 rounded-full bg-muted overflow-hidden">
+                {user?.profileImageUrl ? (
+                  <img
+                    src={user.profileImageUrl}
+                    alt={user.username}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground font-medium">
+                    {user?.username?.charAt(0).toUpperCase() || <User className="w-6 h-6" />}
+                  </div>
+                )}
               </div>
               <div className="hidden xl:flex flex-1 flex-col items-start">
                 <div className="font-semibold text-sm">{user?.username || '로딩중...'}</div>
