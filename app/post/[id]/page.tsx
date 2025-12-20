@@ -5,12 +5,13 @@ import { ArrowLeft, Heart, MessageCircle, Share, MoreHorizontal, Bookmark, Repea
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Sidebar } from "@/components/sidebar"
-import { TrendingPanel } from "@/components/trending-panel"
+import { PostDetailSidebar } from "@/components/post-detail-sidebar"
 import { TweetCard } from "@/components/tweet-card"
 import { QuotedTweetCard } from "@/components/quoted-tweet-card"
 import { RepostMenu } from "@/components/repost-menu"
 import { QuoteDialog } from "@/components/quote-dialog"
 import { MediaGallery } from "@/components/media-gallery"
+import { ProfileAvatar } from "@/components/profile-avatar"
 import { usePost } from "@/hooks/api/use-posts"
 import { useReplies, useCreateReply } from "@/hooks/api/use-replies"
 import { useLikePost, useUnlikePost } from "@/hooks/api/use-likes"
@@ -77,14 +78,18 @@ export default function PostPage({ params }: PostPageProps) {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <main className="flex-1 border-x border-border">
-          <div className="flex items-center justify-center h-screen">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-          </div>
-        </main>
-        <aside className="hidden lg:block w-80 xl:w-96">
-          <TrendingPanel />
-        </aside>
+        <div className="flex-1 flex justify-center">
+          <main className="w-full max-w-2xl border-x border-border">
+            <div className="flex items-center justify-center h-screen">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          </main>
+          <aside className="hidden lg:block w-80 xl:w-96 flex-shrink-0">
+            <div className="sticky top-0">
+              <PostDetailSidebar />
+            </div>
+          </aside>
+        </div>
       </div>
     )
   }
@@ -93,17 +98,21 @@ export default function PostPage({ params }: PostPageProps) {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <main className="flex-1 border-x border-border">
-          <div className="flex flex-col items-center justify-center h-screen gap-4">
-            <p className="text-muted-foreground">게시물을 찾을 수 없습니다.</p>
-            <Button variant="outline" onClick={() => router.back()}>
-              돌아가기
-            </Button>
-          </div>
-        </main>
-        <aside className="hidden lg:block w-80 xl:w-96">
-          <TrendingPanel />
-        </aside>
+        <div className="flex-1 flex justify-center">
+          <main className="w-full max-w-2xl border-x border-border">
+            <div className="flex flex-col items-center justify-center h-screen gap-4">
+              <p className="text-muted-foreground">게시물을 찾을 수 없습니다.</p>
+              <Button variant="outline" onClick={() => router.back()}>
+                돌아가기
+              </Button>
+            </div>
+          </main>
+          <aside className="hidden lg:block w-80 xl:w-96 flex-shrink-0">
+            <div className="sticky top-0">
+              <PostDetailSidebar />
+            </div>
+          </aside>
+        </div>
       </div>
     )
   }
@@ -114,268 +123,280 @@ export default function PostPage({ params }: PostPageProps) {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <main className="flex-1 border-x border-border max-w-2xl">
-        {/* 헤더 */}
-        <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border">
-          <div className="flex items-center gap-6 px-4 py-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full"
-              onClick={() => router.back()}
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <h1 className="text-xl font-bold">게시물</h1>
+      <div className="flex-1 flex justify-center">
+        <main className="w-full max-w-2xl border-x border-border">
+          {/* 헤더 */}
+          <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border">
+            <div className="flex items-center gap-6 px-4 py-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full"
+                onClick={() => router.back()}
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h1 className="text-xl font-bold">게시물</h1>
+            </div>
           </div>
-        </div>
 
-        {/* 부모 게시물 (답글인 경우) */}
-        {post.parentPost && (
-          <article
-            className="border-b border-border hover:bg-accent/30 transition-colors cursor-pointer"
-            onClick={() => router.push(`/post/${post.parentPost!.id}`)}
-          >
-            <div className="flex gap-3 p-4">
-              <div className="flex flex-col items-center">
-                <div className="w-12 h-12 rounded-full bg-muted flex-shrink-0" />
-                <div className="w-0.5 flex-1 bg-border mt-2" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-1">
-                    <span className="font-bold hover:underline">
-                      {post.parentPost.username}
-                    </span>
-                    <span className="text-muted-foreground">@{post.parentPost.username}</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="flex-shrink-0 -mr-2 rounded-full hover:bg-primary/10 hover:text-primary"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <MoreHorizontal className="w-5 h-5" />
-                  </Button>
+          {/* 부모 게시물 (답글인 경우) */}
+          {post.parentPost && (
+            <article
+              className="border-b border-border hover:bg-accent/30 transition-colors cursor-pointer"
+              onClick={() => router.push(`/post/${post.parentPost!.id}`)}
+            >
+              <div className="flex gap-3 p-4">
+                <div className="flex flex-col items-center">
+                  <ProfileAvatar
+                    mediaId={post.parentPost.userProfileMediaId}
+                    username={post.parentPost.username}
+                    size="md"
+                  />
+                  <div className="w-0.5 flex-1 bg-border mt-2" />
                 </div>
-                <p className="leading-relaxed whitespace-pre-wrap mb-3">{post.parentPost.content}</p>
-                {/* 부모 게시물 미디어 */}
-                {post.parentPost.mediaIds && post.parentPost.mediaIds.length > 0 && (
-                  <div className="mb-3">
-                    <MediaGallery mediaIds={post.parentPost.mediaIds} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold hover:underline">
+                        {post.parentPost.username}
+                      </span>
+                      <span className="text-muted-foreground">@{post.parentPost.username}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="flex-shrink-0 -mr-2 rounded-full hover:bg-primary/10 hover:text-primary"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <MoreHorizontal className="w-5 h-5" />
+                    </Button>
                   </div>
-                )}
-                {/* 부모 게시물 액션 버튼 */}
-                <div className="flex items-center gap-6 -ml-2 text-muted-foreground">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="hover:text-primary hover:bg-primary/10 gap-2 rounded-full"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <MessageCircle className="w-[18px] h-[18px]" />
-                    <span className="text-sm tabular-nums">{post.parentPost.replyCount || ""}</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="hover:text-green-500 hover:bg-green-500/10 gap-2 rounded-full"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Repeat2 className="w-[18px] h-[18px]" />
-                    <span className="text-sm tabular-nums">{post.parentPost.repostCount || ""}</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="hover:text-rose-500 hover:bg-rose-500/10 gap-2 rounded-full"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Heart className="w-[18px] h-[18px]" />
-                    <span className="text-sm tabular-nums">{post.parentPost.likeCount || ""}</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="hover:text-primary hover:bg-primary/10 rounded-full"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Share className="w-[18px] h-[18px]" />
-                  </Button>
+                  <p className="leading-relaxed whitespace-pre-wrap mb-3">{post.parentPost.content}</p>
+                  {/* 부모 게시물 미디어 */}
+                  {post.parentPost.mediaIds && post.parentPost.mediaIds.length > 0 && (
+                    <div className="mb-3">
+                      <MediaGallery mediaIds={post.parentPost.mediaIds} />
+                    </div>
+                  )}
+                  {/* 부모 게시물 액션 버튼 */}
+                  <div className="flex items-center gap-6 -ml-2 text-muted-foreground">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="hover:text-primary hover:bg-primary/10 gap-2 rounded-full"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <MessageCircle className="w-[18px] h-[18px]" />
+                      <span className="text-sm tabular-nums">{post.parentPost.replyCount || ""}</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="hover:text-green-500 hover:bg-green-500/10 gap-2 rounded-full"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Repeat2 className="w-[18px] h-[18px]" />
+                      <span className="text-sm tabular-nums">{post.parentPost.repostCount || ""}</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="hover:text-rose-500 hover:bg-rose-500/10 gap-2 rounded-full"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Heart className="w-[18px] h-[18px]" />
+                      <span className="text-sm tabular-nums">{post.parentPost.likeCount || ""}</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="hover:text-primary hover:bg-primary/10 rounded-full"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Share className="w-[18px] h-[18px]" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          )}
+
+          {/* 메인 게시물 (상세) */}
+          <article ref={mainPostRef} className="border-b border-border">
+            <div className="p-4">
+              {/* 작성자 정보 */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <ProfileAvatar
+                    mediaId={post.userProfileMediaId}
+                    username={post.username}
+                    size="md"
+                  />
+                  <div>
+                    <div className="font-bold hover:underline cursor-pointer">{post.username}</div>
+                    <div className="text-muted-foreground text-sm">@{post.username}</div>
+                  </div>
+                </div>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <MoreHorizontal className="w-5 h-5" />
+                </Button>
+              </div>
+
+              {/* 본문 */}
+              <p className="text-xl leading-relaxed whitespace-pre-wrap mb-4">{post.content}</p>
+
+              {/* 미디어 */}
+              {post.mediaIds && post.mediaIds.length > 0 && (
+                <div className="mb-4">
+                  <MediaGallery mediaIds={post.mediaIds} />
+                </div>
+              )}
+
+              {/* 인용된 트윗 */}
+              {post.quotedPost && (
+                <QuotedTweetCard
+                  post={post.quotedPost}
+                  onClick={() => router.push(`/post/${post.quotedPost!.id}`)}
+                />
+              )}
+
+              {/* 시간 */}
+              <div className="flex items-center gap-1 text-muted-foreground text-sm py-4 border-b border-border">
+                <span>{formattedTime}</span>
+                <span>·</span>
+                <span>{formattedDate}</span>
+                <span>·</span>
+                <span className="text-foreground font-semibold">{post.viewCount.toLocaleString()}</span>
+                <span>조회수</span>
+              </div>
+
+              {/* 상세 통계 */}
+              <div className="flex items-center gap-4 py-4 border-b border-border text-sm">
+                <button className="hover:underline">
+                  <span className="font-bold">{post.repostCount}</span>
+                  <span className="text-muted-foreground ml-1">재게시</span>
+                </button>
+                <button className="hover:underline">
+                  <span className="font-bold">{post.likeCount}</span>
+                  <span className="text-muted-foreground ml-1">마음에 들어요</span>
+                </button>
+                <button className="hover:underline">
+                  <span className="font-bold">{post.replyCount}</span>
+                  <span className="text-muted-foreground ml-1">답글</span>
+                </button>
+              </div>
+
+              {/* 액션 버튼 (상세) */}
+              <div className="flex items-center justify-around py-2 border-b border-border">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full"
+                >
+                  <MessageCircle className="w-6 h-6" />
+                </Button>
+
+                <RepostMenu post={post} onQuoteClick={() => setQuoteDialogOpen(true)} />
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-full",
+                    post.isLikedByMe && "text-rose-500"
+                  )}
+                  onClick={handleLike}
+                  disabled={likePost.isPending || unlikePost.isPending}
+                >
+                  <Heart className={cn("w-6 h-6", post.isLikedByMe && "fill-current")} />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full"
+                >
+                  <Bookmark className="w-6 h-6" />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full"
+                >
+                  <Share className="w-6 h-6" />
+                </Button>
+              </div>
+            </div>
+
+            {/* 답글 작성 */}
+            <div className="p-4 border-b border-border">
+              <div className="flex gap-3">
+                <div className="w-10 h-10 rounded-full bg-muted flex-shrink-0" />
+                <div className="flex-1">
+                  <Textarea
+                    placeholder="답글 게시하기"
+                    className="min-h-[60px] resize-none border-none p-0 text-lg focus-visible:ring-0 placeholder:text-muted-foreground"
+                    value={replyContent}
+                    onChange={(e) => setReplyContent(e.target.value)}
+                  />
+                  <div className="flex justify-end mt-2">
+                    <Button
+                      className="rounded-full font-bold px-5"
+                      onClick={handleReplySubmit}
+                      disabled={!replyContent.trim() || createReply.isPending}
+                    >
+                      {createReply.isPending ? "작성 중..." : "답글"}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
           </article>
-        )}
 
-        {/* 메인 게시물 (상세) */}
-        <article ref={mainPostRef} className="border-b border-border">
-          <div className="p-4">
-            {/* 작성자 정보 */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-muted" />
-                <div>
-                  <div className="font-bold hover:underline cursor-pointer">{post.username}</div>
-                  <div className="text-muted-foreground text-sm">@{post.username}</div>
-                </div>
-              </div>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <MoreHorizontal className="w-5 h-5" />
-              </Button>
-            </div>
-
-            {/* 본문 */}
-            <p className="text-xl leading-relaxed whitespace-pre-wrap mb-4">{post.content}</p>
-
-            {/* 미디어 */}
-            {post.mediaIds && post.mediaIds.length > 0 && (
-              <div className="mb-4">
-                <MediaGallery mediaIds={post.mediaIds} />
+          {/* 답글 목록 */}
+          <div>
+            {repliesLoading && (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
             )}
 
-            {/* 인용된 트윗 */}
-            {post.quotedPost && (
-              <QuotedTweetCard
-                post={post.quotedPost}
-                onClick={() => router.push(`/post/${post.quotedPost!.id}`)}
+            {replies && replies.length === 0 && (
+              <div className="text-center p-8 text-muted-foreground">
+                <p>아직 답글이 없습니다.</p>
+                <p className="text-sm mt-2">첫 번째 답글을 남겨보세요!</p>
+              </div>
+            )}
+
+            {replies?.map((reply) => (
+              <TweetCard
+                key={reply.id}
+                post={{
+                  ...reply,
+                  repostCount: 0,
+                  likeCount: 0,
+                  replyCount: 0,
+                  viewCount: 0,
+                  mediaIds: [],
+                  quoteId: null,
+                  repostId: null,
+                  isLikedByMe: false,
+                  likeIdByMe: null,
+                  isRepostedByMe: false,
+                  repostIdByMe: null,
+                }}
               />
-            )}
-
-            {/* 시간 */}
-            <div className="flex items-center gap-1 text-muted-foreground text-sm py-4 border-b border-border">
-              <span>{formattedTime}</span>
-              <span>·</span>
-              <span>{formattedDate}</span>
-              <span>·</span>
-              <span className="text-foreground font-semibold">{post.viewCount.toLocaleString()}</span>
-              <span>조회수</span>
-            </div>
-
-            {/* 상세 통계 */}
-            <div className="flex items-center gap-4 py-4 border-b border-border text-sm">
-              <button className="hover:underline">
-                <span className="font-bold">{post.repostCount}</span>
-                <span className="text-muted-foreground ml-1">재게시</span>
-              </button>
-              <button className="hover:underline">
-                <span className="font-bold">{post.likeCount}</span>
-                <span className="text-muted-foreground ml-1">마음에 들어요</span>
-              </button>
-              <button className="hover:underline">
-                <span className="font-bold">{post.replyCount}</span>
-                <span className="text-muted-foreground ml-1">답글</span>
-              </button>
-            </div>
-
-            {/* 액션 버튼 (상세) */}
-            <div className="flex items-center justify-around py-2 border-b border-border">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full"
-              >
-                <MessageCircle className="w-6 h-6" />
-              </Button>
-
-              <RepostMenu post={post} onQuoteClick={() => setQuoteDialogOpen(true)} />
-
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-full",
-                  post.isLikedByMe && "text-rose-500"
-                )}
-                onClick={handleLike}
-                disabled={likePost.isPending || unlikePost.isPending}
-              >
-                <Heart className={cn("w-6 h-6", post.isLikedByMe && "fill-current")} />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full"
-              >
-                <Bookmark className="w-6 h-6" />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full"
-              >
-                <Share className="w-6 h-6" />
-              </Button>
-            </div>
+            ))}
           </div>
-
-          {/* 답글 작성 */}
-          <div className="p-4 border-b border-border">
-            <div className="flex gap-3">
-              <div className="w-10 h-10 rounded-full bg-muted flex-shrink-0" />
-              <div className="flex-1">
-                <Textarea
-                  placeholder="답글 게시하기"
-                  className="min-h-[60px] resize-none border-none p-0 text-lg focus-visible:ring-0 placeholder:text-muted-foreground"
-                  value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
-                />
-                <div className="flex justify-end mt-2">
-                  <Button
-                    className="rounded-full font-bold px-5"
-                    onClick={handleReplySubmit}
-                    disabled={!replyContent.trim() || createReply.isPending}
-                  >
-                    {createReply.isPending ? "작성 중..." : "답글"}
-                  </Button>
-                </div>
-              </div>
-            </div>
+        </main>
+        <aside className="hidden lg:block w-80 xl:w-96 flex-shrink-0">
+          <div className="sticky top-0">
+            <PostDetailSidebar />
           </div>
-        </article>
-
-        {/* 답글 목록 */}
-        <div>
-          {repliesLoading && (
-            <div className="flex items-center justify-center p-8">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-            </div>
-          )}
-
-          {replies && replies.length === 0 && (
-            <div className="text-center p-8 text-muted-foreground">
-              <p>아직 답글이 없습니다.</p>
-              <p className="text-sm mt-2">첫 번째 답글을 남겨보세요!</p>
-            </div>
-          )}
-
-          {replies?.map((reply) => (
-            <TweetCard
-              key={reply.id}
-              post={{
-                ...reply,
-                repostCount: 0,
-                likeCount: 0,
-                replyCount: 0,
-                viewCount: 0,
-                mediaIds: [],
-                quoteId: null,
-                repostId: null,
-                isLikedByMe: false,
-                likeIdByMe: null,
-                isRepostedByMe: false,
-                repostIdByMe: null,
-              }}
-            />
-          ))}
-        </div>
-      </main>
-      <aside className="hidden lg:block w-80 xl:w-96">
-        <TrendingPanel />
-      </aside>
+        </aside>
+      </div>
 
       {/* 인용 다이얼로그 */}
       <QuoteDialog
