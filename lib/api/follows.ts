@@ -21,4 +21,8 @@ export const followsApi = {
   getFollowCounts: () => {
     return apiClient.get<FollowCountResponse>('/api/v1/follow_counts')
   },
+
+  isFollowing: (followeeId: number) => {
+    return apiClient.get<boolean>(`/api/v1/follows/check/${followeeId}`)
+  },
 }

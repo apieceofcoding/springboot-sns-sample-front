@@ -100,45 +100,59 @@ export function TweetComposer() {
               uploadingMedia.length === 3 ? 'grid-cols-2' :
               'grid-cols-2'
             }`}>
-              {uploadingMedia.map((media, index) => (
-                <div
-                  key={media.id}
-                  className={`relative rounded-xl overflow-hidden bg-muted ${
-                    uploadingMedia.length === 3 && index === 0 ? 'row-span-2' : ''
-                  }`}
-                >
-                  <img
-                    src={media.preview}
-                    alt="업로드 미디어"
-                    className="w-full h-full object-cover aspect-square"
-                  />
-
-                  {/* 업로드 진행 상태 오버레이 */}
-                  {media.status === 'uploading' && (
-                    <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center">
-                      <Loader2 className="w-8 h-8 text-white animate-spin mb-2" />
-                      <Progress value={media.progress} className="w-3/4 h-1" />
-                      <span className="text-white text-sm mt-1">{media.progress}%</span>
-                    </div>
-                  )}
-
-                  {/* 에러 상태 오버레이 */}
-                  {media.status === 'error' && (
-                    <div className="absolute inset-0 bg-red-500/50 flex items-center justify-center">
-                      <span className="text-white text-sm">업로드 실패</span>
-                    </div>
-                  )}
-
-                  {/* 삭제 버튼 */}
-                  <button
-                    onClick={() => removeMedia(media.id)}
-                    className="absolute top-2 right-2 w-8 h-8 bg-black/70 hover:bg-black/90 rounded-full flex items-center justify-center transition-colors"
-                    disabled={media.status === 'uploading'}
+              {uploadingMedia.map((media, index) => {
+                const isVideo = media.file.type.startsWith('video/')
+                return (
+                  <div
+                    key={media.id}
+                    className={`relative rounded-xl overflow-hidden bg-muted ${
+                      uploadingMedia.length === 3 && index === 0 ? 'row-span-2' : ''
+                    } ${isVideo ? 'aspect-video' : 'aspect-square'}`}
                   >
-                    <X className="w-4 h-4 text-white" />
-                  </button>
-                </div>
-              ))}
+                    {isVideo ? (
+                      <video
+                        src={media.preview}
+                        className="w-full h-full object-cover"
+                        muted
+                        loop
+                        autoPlay
+                        playsInline
+                      />
+                    ) : (
+                      <img
+                        src={media.preview}
+                        alt="업로드 미디어"
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+
+                    {/* 업로드 진행 상태 오버레이 */}
+                    {media.status === 'uploading' && (
+                      <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center">
+                        <Loader2 className="w-8 h-8 text-white animate-spin mb-2" />
+                        <Progress value={media.progress} className="w-3/4 h-1" />
+                        <span className="text-white text-sm mt-1">{media.progress}%</span>
+                      </div>
+                    )}
+
+                    {/* 에러 상태 오버레이 */}
+                    {media.status === 'error' && (
+                      <div className="absolute inset-0 bg-red-500/50 flex items-center justify-center">
+                        <span className="text-white text-sm">업로드 실패</span>
+                      </div>
+                    )}
+
+                    {/* 삭제 버튼 */}
+                    <button
+                      onClick={() => removeMedia(media.id)}
+                      className="absolute top-2 right-2 w-8 h-8 bg-black/70 hover:bg-black/90 rounded-full flex items-center justify-center transition-colors"
+                      disabled={media.status === 'uploading'}
+                    >
+                      <X className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
+                )
+              })}
             </div>
           )}
 

@@ -20,6 +20,7 @@ interface VideoPlayerProps {
   muted?: boolean
   loop?: boolean
   isGif?: boolean
+  autoPlayOnView?: boolean // 뷰포트에 들어오면 자동재생
 }
 
 export function VideoPlayer({
@@ -28,7 +29,8 @@ export function VideoPlayer({
   autoPlay = true,
   muted: initialMuted = true,
   loop = true,
-  isGif = false
+  isGif = false,
+  autoPlayOnView = false
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -136,6 +138,40 @@ export function VideoPlayer({
       document.removeEventListener('fullscreenchange', handleFullscreenChange)
     }
   }, [])
+
+  // 뷰포트 진입 시 자동재생
+  useEffect(() => {
+    if (!autoPlayOnView) return
+
+    const video = videoRef.current
+    const container = containerRef.current
+    if (!video || !container) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // 뷰포트에 50% 이상 보이면 재생
+            video.play().catch(() => {
+              // 자동재생 실패 시 무시 (브라우저 정책)
+            })
+          } else {
+            // 뷰포트를 벗어나면 일시정지
+            video.pause()
+          }
+        })
+      },
+      {
+        threshold: 0.5, // 50% 이상 보일 때
+      }
+    )
+
+    observer.observe(container)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [autoPlayOnView])
 
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -312,6 +348,7 @@ export function VideoPlayer({
         muted={initialMuted}
         loop={loop}
         playsInline
+        preload="metadata"
       />
 
       {/* 중앙 재생/일시정지 버튼 */}

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { mediaApi } from "@/lib/api/media"
 import { cn } from "@/lib/utils"
 import { VideoPlayer } from "./video-player"
+import { ImageLightbox } from "./image-lightbox"
 import type { MediaType } from "@/lib/types"
 
 interface MediaGalleryProps {
@@ -21,6 +22,7 @@ interface MediaItem {
 
 export function MediaGallery({ mediaIds, className }: MediaGalleryProps) {
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([])
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   useEffect(() => {
     if (mediaIds.length === 0) return
@@ -103,6 +105,7 @@ export function MediaGallery({ mediaIds, className }: MediaGalleryProps) {
   }
 
   return (
+  <>
     <div
       className={cn(
         "grid gap-0.5 rounded-2xl overflow-hidden border border-border",
@@ -133,10 +136,11 @@ export function MediaGallery({ mediaIds, className }: MediaGalleryProps) {
               <VideoPlayer
                 src={item.url}
                 className="w-full h-full"
-                autoPlay={true}
+                autoPlay={item.mediaType === 'GIF'}
                 muted={true}
                 loop={item.mediaType === 'GIF'}
                 isGif={item.mediaType === 'GIF'}
+                autoPlayOnView={item.mediaType === 'VIDEO'}
               />
             ) : (
               <img
@@ -145,7 +149,12 @@ export function MediaGallery({ mediaIds, className }: MediaGalleryProps) {
                 className="w-full h-full object-cover hover:opacity-90 transition-opacity cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation()
-                  window.open(item.url!, '_blank')
+                  // Find the index of this image among all images (excluding videos)
+                  const imageItems = mediaItems.filter(m => m.mediaType === 'IMAGE' && m.url)
+                  const imageIndex = imageItems.findIndex(m => m.id === item.id)
+                  if (imageIndex !== -1) {
+                    setLightboxIndex(imageIndex)
+                  }
                 }}
               />
             )
@@ -153,5 +162,17 @@ export function MediaGallery({ mediaIds, className }: MediaGalleryProps) {
         </div>
       ))}
     </div>
+
+    {/* Image Lightbox */}
+    {lightboxIndex !== null && (
+      <ImageLightbox
+        images={mediaItems
+          .filter(m => m.mediaType === 'IMAGE' && m.url)
+          .map(m => ({ id: m.id, url: m.url! }))}
+        initialIndex={lightboxIndex}
+        onClose={() => setLightboxIndex(null)}
+      />
+    )}
+  </>
   )
 }

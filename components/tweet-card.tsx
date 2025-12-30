@@ -15,6 +15,7 @@ import { QuotedTweetCard } from "./quoted-tweet-card"
 import { MediaGallery } from "./media-gallery"
 import { ProfileAvatar } from "./profile-avatar"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 interface TweetCardProps {
   post: Post
@@ -107,11 +108,16 @@ export function TweetCard({ post, showThread = false, isThreadChild = false }: T
           {/* 스레드 연결선 */}
           {showThread && (
             <div className="flex flex-col items-center">
-              <ProfileAvatar
-                mediaId={displayPost.userProfileMediaId}
-                username={displayPost.username}
-                size="md"
-              />
+              <Link
+                href={`/users/${displayPost.userId}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ProfileAvatar
+                  mediaId={displayPost.userProfileMediaId}
+                  username={displayPost.username}
+                  size="md"
+                />
+              </Link>
               {isThreadChild && (
                 <div className="w-0.5 flex-1 bg-border mt-2" />
               )}
@@ -119,23 +125,36 @@ export function TweetCard({ post, showThread = false, isThreadChild = false }: T
           )}
 
           {!showThread && (
-            <ProfileAvatar
-              mediaId={displayPost.userProfileMediaId}
-              username={displayPost.username}
-              size="md"
-            />
+            <Link
+              href={`/users/${displayPost.userId}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ProfileAvatar
+                mediaId={displayPost.userProfileMediaId}
+                username={displayPost.username}
+                size="md"
+              />
+            </Link>
           )}
 
           <div className="flex-1 min-w-0">
             {/* 헤더 - 재게시면 원본 작성자, 아니면 현재 작성자 */}
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-1 min-w-0 flex-wrap">
-                <span className="font-bold truncate hover:underline">
+                <Link
+                  href={`/users/${displayPost.userId}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="font-bold truncate hover:underline"
+                >
                   {displayPost.username}
-                </span>
-                <span className="text-muted-foreground truncate">
+                </Link>
+                <Link
+                  href={`/users/${displayPost.userId}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-muted-foreground truncate hover:underline"
+                >
                   @{displayPost.username}
-                </span>
+                </Link>
                 <span className="text-muted-foreground">·</span>
                 <span className="text-muted-foreground truncate">
                   {repostedPostDate}

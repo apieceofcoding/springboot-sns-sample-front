@@ -19,7 +19,7 @@ export interface MediaInitRequest {
 
 export interface PresignedUrlPart {
   partNumber: number
-  url: string
+  presignedUrl: string
 }
 
 export interface MediaInitResponse {

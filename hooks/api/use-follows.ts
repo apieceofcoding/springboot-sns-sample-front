@@ -32,9 +32,10 @@ export function useFollow() {
 
   return useMutation({
     mutationFn: (followeeId: number) => followsApi.follow({ followeeId }),
-    onSuccess: () => {
+    onSuccess: (_, followeeId) => {
       queryClient.invalidateQueries({ queryKey: ['follows', 'followees'] })
       queryClient.invalidateQueries({ queryKey: ['follow-counts'] })
+      queryClient.invalidateQueries({ queryKey: ['follows', 'isFollowing', followeeId] })
       toast.success('팔로우했습니다!')
     },
     onError: (error) => {
@@ -49,14 +50,23 @@ export function useUnfollow() {
 
   return useMutation({
     mutationFn: (followeeId: number) => followsApi.unfollow({ followeeId }),
-    onSuccess: () => {
+    onSuccess: (_, followeeId) => {
       queryClient.invalidateQueries({ queryKey: ['follows', 'followees'] })
       queryClient.invalidateQueries({ queryKey: ['follow-counts'] })
+      queryClient.invalidateQueries({ queryKey: ['follows', 'isFollowing', followeeId] })
       toast.success('언팔로우했습니다!')
     },
     onError: (error) => {
       toast.error('언팔로우 실패')
       console.error('Unfollow error:', error)
     },
+  })
+}
+
+export function useIsFollowing(followeeId: number, enabled: boolean = true) {
+  return useQuery({
+    queryKey: ['follows', 'isFollowing', followeeId],
+    queryFn: () => followsApi.isFollowing(followeeId),
+    enabled,
   })
 }

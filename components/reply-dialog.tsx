@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import { X } from "lucide-react"
+import { useState, useRef } from "react"
+import { X, ImageIcon, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { Progress } from "@/components/ui/progress"
 import {
   Dialog,
   DialogContent,
@@ -13,8 +14,11 @@ import {
 import { formatDistanceToNow } from "date-fns"
 import { ko } from "date-fns/locale"
 import { useCreateReply } from "@/hooks/api/use-replies"
+import { useMediaUpload } from "@/hooks/api/use-media"
 import { cn } from "@/lib/utils"
 import type { Post } from "@/lib/types"
+
+const MAX_IMAGES = 4
 
 interface ReplyDialogProps {
   post: Post
@@ -25,21 +29,57 @@ interface ReplyDialogProps {
 export function ReplyDialog({ post, open, onOpenChange }: ReplyDialogProps) {
   const [content, setContent] = useState("")
   const createReply = useCreateReply()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const {
+    uploadingMedia,
+    completedMediaIds,
+    uploadMedia,
+    removeMedia,
+    clearAll,
+    isUploading
+  } = useMediaUpload()
 
   const formattedDate = formatDistanceToNow(new Date(post.createdAt), {
     addSuffix: false,
     locale: ko,
   })
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+
+    const remainingSlots = MAX_IMAGES - uploadingMedia.length
+    const filesToUpload = Array.from(files).slice(0, remainingSlots)
+
+    for (const file of filesToUpload) {
+      if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+        await uploadMedia(file)
+      }
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const handleImageButtonClick = () => {
+    fileInputRef.current?.click()
+  }
+
   const handleSubmit = async () => {
-    if (!content.trim()) return
+    if (!content.trim() && completedMediaIds.length === 0) return
+    if (isUploading) return
 
     try {
       await createReply.mutateAsync({
         postId: post.id,
-        data: { content: content.trim() },
+        data: {
+          content: content.trim(),
+          mediaIds: completedMediaIds.length > 0 ? completedMediaIds : undefined,
+        },
       })
       setContent("")
+      clearAll()
       onOpenChange(false)
     } catch (error) {
       console.error("Failed to create reply:", error)
@@ -48,8 +88,11 @@ export function ReplyDialog({ post, open, onOpenChange }: ReplyDialogProps) {
 
   const handleClose = () => {
     setContent("")
+    clearAll()
     onOpenChange(false)
   }
+
+  const canSubmit = (content.trim() || completedMediaIds.length > 0) && !isUploading
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -68,9 +111,9 @@ export function ReplyDialog({ post, open, onOpenChange }: ReplyDialogProps) {
             <Button
               className="rounded-full font-bold px-5"
               onClick={handleSubmit}
-              disabled={!content.trim() || createReply.isPending}
+              disabled={!canSubmit || createReply.isPending}
             >
-              {createReply.isPending ? "작성 중..." : "답글"}
+              {createReply.isPending ? "작성 중..." : isUploading ? "업로드 중..." : "답글"}
             </Button>
           </div>
         </DialogHeader>
@@ -109,12 +152,95 @@ export function ReplyDialog({ post, open, onOpenChange }: ReplyDialogProps) {
                 onChange={(e) => setContent(e.target.value)}
                 autoFocus
               />
+
+              {/* 미디어 프리뷰 */}
+              {uploadingMedia.length > 0 && (
+                <div className={`grid gap-2 mt-3 ${
+                  uploadingMedia.length === 1 ? 'grid-cols-1' :
+                  uploadingMedia.length === 2 ? 'grid-cols-2' :
+                  uploadingMedia.length === 3 ? 'grid-cols-2' :
+                  'grid-cols-2'
+                }`}>
+                  {uploadingMedia.map((media, index) => {
+                    const isVideo = media.file.type.startsWith('video/')
+                    return (
+                      <div
+                        key={media.id}
+                        className={`relative rounded-xl overflow-hidden bg-muted ${
+                          uploadingMedia.length === 3 && index === 0 ? 'row-span-2' : ''
+                        } ${isVideo ? 'aspect-video' : 'aspect-square'}`}
+                      >
+                        {isVideo ? (
+                          <video
+                            src={media.preview}
+                            className="w-full h-full object-cover"
+                            muted
+                            loop
+                            autoPlay
+                            playsInline
+                          />
+                        ) : (
+                          <img
+                            src={media.preview}
+                            alt="업로드 미디어"
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+
+                        {/* 업로드 진행 상태 오버레이 */}
+                        {media.status === 'uploading' && (
+                          <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center">
+                            <Loader2 className="w-6 h-6 text-white animate-spin mb-2" />
+                            <Progress value={media.progress} className="w-3/4 h-1" />
+                            <span className="text-white text-xs mt-1">{media.progress}%</span>
+                          </div>
+                        )}
+
+                        {/* 에러 상태 오버레이 */}
+                        {media.status === 'error' && (
+                          <div className="absolute inset-0 bg-red-500/50 flex items-center justify-center">
+                            <span className="text-white text-xs">업로드 실패</span>
+                          </div>
+                        )}
+
+                        {/* 삭제 버튼 */}
+                        <button
+                          onClick={() => removeMedia(media.id)}
+                          className="absolute top-1 right-1 w-6 h-6 bg-black/70 hover:bg-black/90 rounded-full flex items-center justify-center transition-colors"
+                          disabled={media.status === 'uploading'}
+                        >
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         <div className="px-4 pb-4 pt-2 border-t border-border">
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-1">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-primary hover:bg-primary/10 h-8 w-8"
+                onClick={handleImageButtonClick}
+                disabled={uploadingMedia.length >= MAX_IMAGES}
+              >
+                <ImageIcon className="w-4 h-4" />
+              </Button>
+            </div>
             <span className={cn(
               "text-sm",
               content.length > 280 ? "text-destructive" : "text-muted-foreground"

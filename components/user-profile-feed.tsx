@@ -3,17 +3,19 @@
 import { TweetCard } from "./tweet-card"
 import { ProfileMediaGrid } from "./profile-media-grid"
 import { ProfileAvatar } from "./profile-avatar"
-import { useMyPosts, useMyReplies, useMyLikes, useMyMediaPosts } from "@/hooks/api/use-profile"
+import { useUserPosts, useUserReplies } from "@/hooks/api/use-users"
+import { useMyLikes } from "@/hooks/api/use-profile"
 import { useAuth } from "@/hooks/api/use-auth"
 import { Loader2 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { ko } from "date-fns/locale"
 import { useRouter } from "next/navigation"
-import type { ProfileTab } from "@/app/profile/page"
+import type { UserProfileTab } from "./user-profile-header"
 import type { Reply } from "@/lib/types"
 
-interface ProfileFeedProps {
-  activeTab: ProfileTab
+interface UserProfileFeedProps {
+  userId: number
+  activeTab: UserProfileTab
 }
 
 function ReplyCard({ reply }: { reply: Reply }) {
@@ -50,9 +52,9 @@ function ReplyCard({ reply }: { reply: Reply }) {
   )
 }
 
-function PostsFeed() {
+function PostsFeed({ userId }: { userId: number }) {
   const { isAuthenticated } = useAuth()
-  const { data: posts, isLoading, error } = useMyPosts(isAuthenticated)
+  const { data: posts, isLoading, error } = useUserPosts(userId, isAuthenticated)
 
   if (isLoading) {
     return (
@@ -87,9 +89,9 @@ function PostsFeed() {
   )
 }
 
-function RepliesFeed() {
+function RepliesFeed({ userId }: { userId: number }) {
   const { isAuthenticated } = useAuth()
-  const { data: replies, isLoading, error } = useMyReplies(isAuthenticated)
+  const { data: replies, isLoading, error } = useUserReplies(userId, isAuthenticated)
 
   if (isLoading) {
     return (
@@ -124,9 +126,9 @@ function RepliesFeed() {
   )
 }
 
-function MediaFeed() {
+function MediaFeed({ userId }: { userId: number }) {
   const { isAuthenticated } = useAuth()
-  const { data: posts, isLoading, error } = useMyMediaPosts(isAuthenticated)
+  const { data: posts, isLoading, error } = useUserPosts(userId, isAuthenticated)
 
   if (isLoading) {
     return (
@@ -144,7 +146,9 @@ function MediaFeed() {
     )
   }
 
-  if (!posts || posts.length === 0) {
+  const mediaPosts = posts?.filter(post => post.mediaIds && post.mediaIds.length > 0) ?? []
+
+  if (mediaPosts.length === 0) {
     return (
       <div className="text-center p-8 text-muted-foreground">
         <p>아직 미디어가 없습니다.</p>
@@ -152,7 +156,7 @@ function MediaFeed() {
     )
   }
 
-  return <ProfileMediaGrid posts={posts} />
+  return <ProfileMediaGrid posts={mediaPosts} />
 }
 
 function LikesFeed() {
@@ -192,17 +196,17 @@ function LikesFeed() {
   )
 }
 
-export function ProfileFeed({ activeTab }: ProfileFeedProps) {
+export function UserProfileFeed({ userId, activeTab }: UserProfileFeedProps) {
   switch (activeTab) {
     case "posts":
-      return <PostsFeed />
+      return <PostsFeed userId={userId} />
     case "replies":
-      return <RepliesFeed />
+      return <RepliesFeed userId={userId} />
     case "media":
-      return <MediaFeed />
+      return <MediaFeed userId={userId} />
     case "likes":
       return <LikesFeed />
     default:
-      return <PostsFeed />
+      return <PostsFeed userId={userId} />
   }
 }

@@ -13,7 +13,7 @@ export interface UploadingMedia {
   status: 'uploading' | 'completed' | 'error'
 }
 
-const CHUNK_SIZE = 5 * 1024 * 1024 // 5MB per part for multipart upload
+const CHUNK_SIZE = 8 * 1024 * 1024 // 8MB per part for multipart upload (matches backend)
 
 function getMediaType(file: File): MediaType {
   if (file.type.startsWith('video/')) {
@@ -172,7 +172,7 @@ async function uploadMultipart(
     const end = Math.min(start + CHUNK_SIZE, file.size)
     const chunk = file.slice(start, end)
 
-    const eTag = await uploadPart(chunk, part.url, (partProgress) => {
+    const eTag = await uploadPart(chunk, part.presignedUrl, (partProgress) => {
       const baseProgress = (i / parts.length) * 100
       const partContribution = (partProgress / 100) * (1 / parts.length) * 100
       onProgress(Math.round(baseProgress + partContribution))

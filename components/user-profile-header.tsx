@@ -6,26 +6,60 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/hooks/api/use-auth"
-import { useFollowCounts } from "@/hooks/api/use-follows"
-import { useMyPosts } from "@/hooks/api/use-profile"
+import { useUser, useUserFollowCounts, useUserPosts } from "@/hooks/api/use-users"
+import { useIsFollowing, useFollow, useUnfollow } from "@/hooks/api/use-follows"
 import { ProfileEditDialog } from "@/components/profile-edit-dialog"
-import type { ProfileTab } from "@/app/profile/page"
 
-interface ProfileHeaderProps {
-  activeTab: ProfileTab
-  onTabChange: (tab: ProfileTab) => void
+export type UserProfileTab = "posts" | "replies" | "media" | "likes"
+
+interface UserProfileHeaderProps {
+  userId: number
+  activeTab: UserProfileTab
+  onTabChange: (tab: UserProfileTab) => void
 }
 
-export function ProfileHeader({ activeTab, onTabChange }: ProfileHeaderProps) {
+export function UserProfileHeader({ userId, activeTab, onTabChange }: UserProfileHeaderProps) {
   const router = useRouter()
-  const { user, isAuthenticated } = useAuth()
-  const { data: followCounts } = useFollowCounts(isAuthenticated)
-  const { data: posts } = useMyPosts(isAuthenticated)
+  const { user: me, isAuthenticated } = useAuth()
+  const { data: user, isLoading: isUserLoading } = useUser(userId)
+  const { data: followCounts } = useUserFollowCounts(userId)
+  const { data: posts } = useUserPosts(userId, isAuthenticated)
+  const { data: isFollowing, isLoading: isFollowingLoading } = useIsFollowing(userId, isAuthenticated && me?.id !== userId)
+  const followMutation = useFollow()
+  const unfollowMutation = useUnfollow()
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+
+  const isMe = me?.id === userId
+  const isLoading = isUserLoading || isFollowingLoading
+  const isMutating = followMutation.isPending || unfollowMutation.isPending
 
   const postCount = posts?.length ?? 0
   const followingCount = followCounts?.followeesCount ?? 0
   const followerCount = followCounts?.followersCount ?? 0
+
+  const handleFollowClick = () => {
+    if (isFollowing) {
+      unfollowMutation.mutate(userId)
+    } else {
+      followMutation.mutate(userId)
+    }
+  }
+
+  if (isUserLoading) {
+    return (
+      <div className="p-8 text-center text-muted-foreground">
+        로딩 중...
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="p-8 text-center text-muted-foreground">
+        사용자를 찾을 수 없습니다.
+      </div>
+    )
+  }
 
   return (
     <>
@@ -40,7 +74,7 @@ export function ProfileHeader({ activeTab, onTabChange }: ProfileHeaderProps) {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold">{user?.username ?? "사용자"}</h1>
+            <h1 className="text-xl font-bold">{user.username}</h1>
             <div className="text-sm text-muted-foreground">{postCount}개 게시물</div>
           </div>
         </div>
@@ -50,9 +84,8 @@ export function ProfileHeader({ activeTab, onTabChange }: ProfileHeaderProps) {
         <div className="h-48 bg-gradient-to-r from-primary/20 to-primary/40" />
         <div className="px-4">
           <div className="flex justify-between items-start -mt-16 mb-4">
-            {/* 프로필 이미지 */}
             <div className="w-32 h-32 rounded-full border-4 border-background bg-muted overflow-hidden">
-              {user?.profileImageUrl ? (
+              {user.profileImageUrl ? (
                 <img
                   src={user.profileImageUrl}
                   alt={user.username}
@@ -60,22 +93,34 @@ export function ProfileHeader({ activeTab, onTabChange }: ProfileHeaderProps) {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-4xl text-muted-foreground font-medium">
-                  {user?.username?.charAt(0).toUpperCase() || '?'}
+                  {user.username?.charAt(0).toUpperCase() || '?'}
                 </div>
               )}
             </div>
-            <Button
-              variant="outline"
-              className="mt-20 rounded-full font-bold bg-transparent"
-              onClick={() => setIsEditDialogOpen(true)}
-            >
-              프로필 수정
-            </Button>
+            {isAuthenticated && !isMe && (
+              <Button
+                variant={isFollowing ? "outline" : "default"}
+                className="mt-20 rounded-full font-bold cursor-pointer"
+                onClick={handleFollowClick}
+                disabled={isMutating || isLoading}
+              >
+                {isMutating ? "..." : isFollowing ? "팔로잉" : "팔로우"}
+              </Button>
+            )}
+            {isMe && (
+              <Button
+                variant="outline"
+                className="mt-20 rounded-full font-bold bg-transparent cursor-pointer"
+                onClick={() => setIsEditDialogOpen(true)}
+              >
+                프로필 수정
+              </Button>
+            )}
           </div>
 
           <div className="mb-4">
-            <h2 className="text-2xl font-bold">{user?.username ?? "사용자"}</h2>
-            <div className="text-muted-foreground">@{user?.username ?? "username"}</div>
+            <h2 className="text-2xl font-bold">{user.username}</h2>
+            <div className="text-muted-foreground">@{user.username}</div>
           </div>
 
           <div className="flex gap-6 mb-4 text-sm">
@@ -90,7 +135,7 @@ export function ProfileHeader({ activeTab, onTabChange }: ProfileHeaderProps) {
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as ProfileTab)} className="w-full">
+        <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as UserProfileTab)} className="w-full">
           <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent h-auto p-0">
             <TabsTrigger
               value="posts"
@@ -110,21 +155,24 @@ export function ProfileHeader({ activeTab, onTabChange }: ProfileHeaderProps) {
             >
               미디어
             </TabsTrigger>
-            <TabsTrigger
-              value="likes"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent flex-1"
-            >
-              마음에 들어요
-            </TabsTrigger>
+            {isMe && (
+              <TabsTrigger
+                value="likes"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent flex-1"
+              >
+                마음에 들어요
+              </TabsTrigger>
+            )}
           </TabsList>
         </Tabs>
       </div>
 
-      {/* 프로필 수정 다이얼로그 */}
-      <ProfileEditDialog
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-      />
+      {isMe && (
+        <ProfileEditDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+        />
+      )}
     </>
   )
 }
