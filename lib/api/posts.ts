@@ -21,4 +21,8 @@ export const postsApi = {
   delete: (id: number) => {
     return apiClient.delete<void>(`/api/v1/posts/${id}`)
   },
+
+  incrementView: (id: number) => {
+    return apiClient.post<void>(`/api/v1/posts/${id}/view`)
+  },
 }

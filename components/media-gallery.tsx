@@ -1,68 +1,29 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { mediaApi } from "@/lib/api/media"
+import { useState } from "react"
+import { usePresignedUrls } from "@/hooks/api/use-media"
 import { cn } from "@/lib/utils"
 import { VideoPlayer } from "./video-player"
 import { ImageLightbox } from "./image-lightbox"
-import type { MediaType } from "@/lib/types"
 
 interface MediaGalleryProps {
   mediaIds: number[]
   className?: string
 }
 
-interface MediaItem {
-  id: number
-  url: string | null
-  mediaType: MediaType | null
-  loading: boolean
-  error: boolean
-}
-
 export function MediaGallery({ mediaIds, className }: MediaGalleryProps) {
-  const [mediaItems, setMediaItems] = useState<MediaItem[]>([])
+  const queries = usePresignedUrls(mediaIds)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
-  useEffect(() => {
-    if (mediaIds.length === 0) return
-
-    // 초기 상태 설정
-    setMediaItems(mediaIds.map(id => ({
-      id,
-      url: null,
-      mediaType: null,
-      loading: true,
-      error: false
-    })))
-
-    // 각 미디어의 정보와 presigned URL 가져오기
-    mediaIds.forEach(async (id) => {
-      try {
-        const response = await mediaApi.getPresignedUrl(id)
-
-        setMediaItems(prev => prev.map(item =>
-          item.id === id
-            ? {
-                ...item,
-                url: response.presignedUrl,
-                mediaType: response.media.mediaType,
-                loading: false
-              }
-            : item
-        ))
-      } catch (error) {
-        console.error(`Failed to fetch media ${id}:`, error)
-        setMediaItems(prev => prev.map(item =>
-          item.id === id
-            ? { ...item, loading: false, error: true }
-            : item
-        ))
-      }
-    })
-  }, [mediaIds])
-
   if (mediaIds.length === 0) return null
+
+  const mediaItems = queries.map((query, index) => ({
+    id: mediaIds[index],
+    url: query.data?.presignedUrl ?? null,
+    mediaType: query.data?.media.mediaType ?? null,
+    loading: query.isLoading,
+    error: query.isError,
+  }))
 
   // 비디오가 하나만 있는 경우 특별 처리
   const hasOnlyOneVideo = mediaItems.length === 1 && mediaItems[0]?.mediaType === 'VIDEO'
@@ -90,7 +51,7 @@ export function MediaGallery({ mediaIds, className }: MediaGalleryProps) {
     return ""
   }
 
-  const getAspectRatio = (index: number, mediaType: MediaType | null) => {
+  const getAspectRatio = (index: number, mediaType: string | null) => {
     // 비디오는 항상 16:9
     if (mediaType === 'VIDEO') {
       return "aspect-video"

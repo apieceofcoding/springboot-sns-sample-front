@@ -1,9 +1,29 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { useQuery, useQueries } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { mediaApi } from '@/lib/api/media'
 import type { MediaType, MediaInitResponse, MediaUploadPart } from '@/lib/types'
+
+export function usePresignedUrl(mediaId: number | null | undefined) {
+  return useQuery({
+    queryKey: ['media', 'presigned', mediaId],
+    queryFn: () => mediaApi.getPresignedUrl(mediaId!),
+    enabled: !!mediaId,
+    staleTime: 5 * 60 * 1000, // 5분 캐싱
+  })
+}
+
+export function usePresignedUrls(mediaIds: number[]) {
+  return useQueries({
+    queries: mediaIds.map(id => ({
+      queryKey: ['media', 'presigned', id],
+      queryFn: () => mediaApi.getPresignedUrl(id),
+      staleTime: 5 * 60 * 1000,
+    })),
+  })
+}
 
 export interface UploadingMedia {
   id: number

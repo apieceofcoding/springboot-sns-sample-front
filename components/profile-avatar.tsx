@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { mediaApi } from "@/lib/api/media"
+import { useState } from "react"
+import { usePresignedUrl } from "@/hooks/api/use-media"
 import { cn } from "@/lib/utils"
 
 interface ProfileAvatarProps {
@@ -18,31 +18,8 @@ const sizeClasses = {
 }
 
 export function ProfileAvatar({ mediaId, username, size = "md", className }: ProfileAvatarProps) {
-  const [imageUrl, setImageUrl] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const { data, isLoading } = usePresignedUrl(mediaId)
   const [error, setError] = useState(false)
-
-  useEffect(() => {
-    if (!mediaId) {
-      setImageUrl(null)
-      return
-    }
-
-    setLoading(true)
-    setError(false)
-
-    mediaApi.getPresignedUrl(mediaId)
-      .then(response => {
-        setImageUrl(response.presignedUrl)
-      })
-      .catch(err => {
-        console.error('Failed to fetch profile image:', err)
-        setError(true)
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [mediaId])
 
   const initials = username ? username.charAt(0).toUpperCase() : '?'
 
@@ -54,11 +31,11 @@ export function ProfileAvatar({ mediaId, username, size = "md", className }: Pro
         className
       )}
     >
-      {loading ? (
+      {isLoading ? (
         <div className="w-full h-full bg-muted animate-pulse" />
-      ) : imageUrl && !error ? (
+      ) : data?.presignedUrl && !error ? (
         <img
-          src={imageUrl}
+          src={data.presignedUrl}
           alt={username || 'Profile'}
           className="w-full h-full object-cover"
           onError={() => setError(true)}

@@ -15,9 +15,11 @@ import { useRepost, useUnrepost } from "@/hooks/api/use-reposts"
 interface RepostMenuProps {
   post: Post
   onQuoteClick: () => void
+  disableRepost?: boolean // 이미 재게시된 글인 경우 재게시 비활성화
+  isReposted?: boolean // 이미 재게시된 글인 경우 초록색 표시
 }
 
-export function RepostMenu({ post, onQuoteClick }: RepostMenuProps) {
+export function RepostMenu({ post, onQuoteClick, disableRepost = false, isReposted = false }: RepostMenuProps) {
   const repost = useRepost()
   const unrepost = useUnrepost()
 
@@ -39,7 +41,7 @@ export function RepostMenu({ post, onQuoteClick }: RepostMenuProps) {
           size="sm"
           className={cn(
             "text-muted-foreground hover:text-green-500 hover:bg-green-500/10 gap-2",
-            post.isRepostedByMe && "text-green-500"
+            (post.isRepostedByMe || isReposted) && "text-green-500"
           )}
           disabled={isLoading}
         >
@@ -54,7 +56,11 @@ export function RepostMenu({ post, onQuoteClick }: RepostMenuProps) {
       >
         <DropdownMenuItem
           onClick={handleRepost}
-          className="flex items-center gap-3 py-3 cursor-pointer focus:bg-accent"
+          disabled={disableRepost && !post.isRepostedByMe}
+          className={cn(
+            "flex items-center gap-3 py-3 cursor-pointer focus:bg-accent",
+            disableRepost && !post.isRepostedByMe && "opacity-50 cursor-not-allowed"
+          )}
         >
           <Repeat2 className={cn("w-5 h-5", post.isRepostedByMe && "text-green-500")} />
           <span className="font-medium">

@@ -59,6 +59,22 @@ export function useUpdatePost() {
   })
 }
 
+// 세션 내 조회된 게시글 ID 추적 (중복 조회 방지)
+const viewedPostIds = new Set<number>()
+
+export function useIncrementView() {
+  return useMutation({
+    mutationFn: (id: number) => {
+      // 이미 조회한 게시글은 다시 호출하지 않음
+      if (viewedPostIds.has(id)) {
+        return Promise.resolve()
+      }
+      viewedPostIds.add(id)
+      return postsApi.incrementView(id)
+    },
+  })
+}
+
 export function useDeletePost() {
   const queryClient = useQueryClient()
 

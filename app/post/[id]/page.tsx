@@ -1,9 +1,25 @@
 "use client"
 
 import { use, useState, useEffect, useRef } from "react"
-import { ArrowLeft, Heart, MessageCircle, Share, MoreHorizontal, Bookmark, Repeat2 } from "lucide-react"
+import { ArrowLeft, Heart, MessageCircle, Share, MoreHorizontal, Bookmark, Repeat2, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Sidebar } from "@/components/sidebar"
 import { PostDetailSidebar } from "@/components/post-detail-sidebar"
 import { TweetCard } from "@/components/tweet-card"
@@ -12,7 +28,7 @@ import { RepostMenu } from "@/components/repost-menu"
 import { QuoteDialog } from "@/components/quote-dialog"
 import { MediaGallery } from "@/components/media-gallery"
 import { ProfileAvatar } from "@/components/profile-avatar"
-import { usePost } from "@/hooks/api/use-posts"
+import { usePost, useDeletePost, useIncrementView } from "@/hooks/api/use-posts"
 import { useReplies, useCreateReply } from "@/hooks/api/use-replies"
 import { useLikePost, useUnlikePost } from "@/hooks/api/use-likes"
 import { useRouter } from "next/navigation"
@@ -35,11 +51,21 @@ export default function PostPage({ params }: PostPageProps) {
 
   const [replyContent, setReplyContent] = useState("")
   const [quoteDialogOpen, setQuoteDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const mainPostRef = useRef<HTMLElement>(null)
 
   const createReply = useCreateReply()
   const likePost = useLikePost()
   const unlikePost = useUnlikePost()
+  const deletePost = useDeletePost()
+  const incrementView = useIncrementView()
+
+  // 상세 페이지 진입 시 조회수 증가
+  useEffect(() => {
+    if (postId) {
+      incrementView.mutate(postId)
+    }
+  }, [postId])
 
   const handleReplySubmit = async () => {
     if (!replyContent.trim() || !post) return
@@ -238,9 +264,22 @@ export default function PostPage({ params }: PostPageProps) {
                     <div className="text-muted-foreground text-sm">@{post.username}</div>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <MoreHorizontal className="w-5 h-5" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full">
+                      <MoreHorizontal className="w-5 h-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem
+                      onClick={() => setDeleteDialogOpen(true)}
+                      className="text-destructive focus:text-destructive cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      삭제
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               {/* 본문 */}
@@ -291,30 +330,32 @@ export default function PostPage({ params }: PostPageProps) {
               <div className="flex items-center justify-around py-2 border-b border-border">
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full"
+                  size="sm"
+                  className="text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full gap-2"
                 >
                   <MessageCircle className="w-6 h-6" />
+                  <span className="text-sm tabular-nums">{post.replyCount || ""}</span>
                 </Button>
 
                 <RepostMenu post={post} onQuoteClick={() => setQuoteDialogOpen(true)} />
 
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                   className={cn(
-                    "text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-full",
+                    "text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-full gap-2",
                     post.isLikedByMe && "text-rose-500"
                   )}
                   onClick={handleLike}
                   disabled={likePost.isPending || unlikePost.isPending}
                 >
                   <Heart className={cn("w-6 h-6", post.isLikedByMe && "fill-current")} />
+                  <span className="text-sm tabular-nums">{post.likeCount || ""}</span>
                 </Button>
 
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                   className="text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full"
                 >
                   <Bookmark className="w-6 h-6" />
@@ -322,7 +363,7 @@ export default function PostPage({ params }: PostPageProps) {
 
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                   className="text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full"
                 >
                   <Share className="w-6 h-6" />
@@ -404,6 +445,31 @@ export default function PostPage({ params }: PostPageProps) {
         open={quoteDialogOpen}
         onOpenChange={setQuoteDialogOpen}
       />
+
+      {/* 삭제 확인 다이얼로그 */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>게시물을 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>
+              이 작업은 되돌릴 수 없습니다. 게시물이 영구적으로 삭제됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                deletePost.mutate(post.id, {
+                  onSuccess: () => router.back(),
+                })
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

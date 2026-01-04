@@ -1,13 +1,31 @@
 "use client"
 
-import { useState } from "react"
-import { Heart, MessageCircle, Share, MoreHorizontal, Repeat2 } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { Heart, MessageCircle, Share, MoreHorizontal, Repeat2, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { formatDistanceToNow } from "date-fns"
 import { ko } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import type { Post } from "@/lib/types"
 import { useLikePost, useUnlikePost } from "@/hooks/api/use-likes"
+import { useDeletePost, useIncrementView } from "@/hooks/api/use-posts"
+import { useAuth } from "@/hooks/api/use-auth"
 import { RepostMenu } from "./repost-menu"
 import { QuoteDialog } from "./quote-dialog"
 import { ReplyDialog } from "./reply-dialog"
@@ -25,10 +43,42 @@ interface TweetCardProps {
 
 export function TweetCard({ post, showThread = false, isThreadChild = false }: TweetCardProps) {
   const router = useRouter()
+  const { user } = useAuth()
   const likePost = useLikePost()
   const unlikePost = useUnlikePost()
+  const deletePost = useDeletePost()
+  const incrementView = useIncrementView()
   const [quoteDialogOpen, setQuoteDialogOpen] = useState(false)
   const [replyDialogOpen, setReplyDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const articleRef = useRef<HTMLElement>(null)
+
+  // 게시글이 뷰포트에 보일 때 조회수 증가
+  useEffect(() => {
+    const article = articleRef.current
+    if (!article) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // 재게시인 경우 원본 게시글의 조회수도 증가
+            const targetId = post.repostedPost?.id || post.id
+            incrementView.mutate(targetId)
+            // 한 번 조회되면 옵저버 해제
+            observer.unobserve(article)
+          }
+        })
+      },
+      { threshold: 0.5 } // 50% 이상 보일 때 조회로 간주
+    )
+
+    observer.observe(article)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [post.id, post.repostedPost?.id])
 
   const formattedDate = formatDistanceToNow(new Date(post.createdAt), {
     addSuffix: true,
@@ -73,6 +123,7 @@ export function TweetCard({ post, showThread = false, isThreadChild = false }: T
   return (
     <>
       <article
+        ref={articleRef}
         onClick={handleCardClick}
         className={cn(
           "flex flex-col hover:bg-accent/30 transition-colors cursor-pointer",
@@ -160,14 +211,31 @@ export function TweetCard({ post, showThread = false, isThreadChild = false }: T
                   {repostedPostDate}
                 </span>
               </div>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="flex-shrink-0 -mr-2 rounded-full hover:bg-primary/10 hover:text-primary"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <MoreHorizontal className="w-5 h-5" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="flex-shrink-0 -mr-2 rounded-full hover:bg-primary/10 hover:text-primary"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreHorizontal className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-48"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <DropdownMenuItem
+                    onClick={() => setDeleteDialogOpen(true)}
+                    className="text-destructive focus:text-destructive cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    삭제
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {/* 본문 - 재게시면 원본 내용, 인용글이면 인용자의 코멘트 */}
@@ -205,7 +273,12 @@ export function TweetCard({ post, showThread = false, isThreadChild = false }: T
 
               {/* 재게시/인용 메뉴 */}
               <div onClick={(e) => e.stopPropagation()}>
-                <RepostMenu post={displayPost} onQuoteClick={() => setQuoteDialogOpen(true)} />
+                <RepostMenu
+                  post={displayPost}
+                  onQuoteClick={() => setQuoteDialogOpen(true)}
+                  disableRepost={isRepost && post.repostedBy?.userId === user?.id}
+                  isReposted={isRepost && post.repostedBy?.userId === user?.id}
+                />
               </div>
 
               {/* 좋아요 버튼 */}
@@ -253,6 +326,27 @@ export function TweetCard({ post, showThread = false, isThreadChild = false }: T
         open={replyDialogOpen}
         onOpenChange={setReplyDialogOpen}
       />
+
+      {/* 삭제 확인 다이얼로그 */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>게시물을 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>
+              이 작업은 되돌릴 수 없습니다. 게시물이 영구적으로 삭제됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletePost.mutate(post.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
