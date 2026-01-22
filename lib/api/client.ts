@@ -3,14 +3,26 @@ import { ApiError } from '@/lib/types'
 export class ApiClient {
   private baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
 
+  /**
+   * Extract CSRF token from cookies
+   * The token is set by the backend in the XSRF-TOKEN cookie
+   */
+  private getCsrfToken(): string | null {
+    if (typeof document === 'undefined') return null
+    const matches = document.cookie.match(/XSRF-TOKEN=([^;]+)/)
+    return matches ? decodeURIComponent(matches[1]) : null
+  }
+
   async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const url = `${this.baseURL}${endpoint}`
+    const csrfToken = this.getCsrfToken()
 
     const response = await fetch(url, {
       ...options,
       credentials: 'include', // 쿠키 기반 세션을 위해 필요
       headers: {
         'Content-Type': 'application/json',
+        ...(csrfToken && { 'X-XSRF-TOKEN': csrfToken }), // CSRF 토큰 헤더 추가 (Spring Security 기본값)
         ...options?.headers,
       },
     })
@@ -85,11 +97,14 @@ export class ApiClient {
     data: URLSearchParams,
     options?: RequestInit
   ): Promise<T> {
+    const csrfToken = this.getCsrfToken()
+
     return this.request<T>(endpoint, {
       ...options,
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
+        ...(csrfToken && { 'X-XSRF-TOKEN': csrfToken }), // CSRF 토큰 헤더 추가 (Spring Security 기본값)
         ...options?.headers,
       },
       body: data.toString(),
